@@ -8,8 +8,8 @@ bl_info = {
     "blender": (3, 0, 0),
     "category": "Object",
     "version": (1, 0),
-    "author": "Your Name",
-    "description": "Collects and saves material IDs for objects containing 'body' in their name.",
+    "author": "Hierosoft LLC",
+    "description": "Collects and saves material IDs for objects containing a search term in their name.",
 }
 
 class MaterialIDCollector(bpy.types.Operator):
@@ -35,17 +35,19 @@ class MaterialIDCollector(bpy.types.Operator):
 
         for obj in context.scene.objects:
             if context.scene.obj_name_filter.lower() in obj.name.lower():
+                suffix = None
                 if found:
                     error = "More than one object matches"
+                    suffix = ".{}".format(obj.name)
                 found = True
-                self.collect_mat_ids(obj, known_mat_ids, ids_path)
+                self.collect_mat_ids(obj, known_mat_ids, ids_path, suffix=suffix)
 
         # Save updated material IDs back to file
         with open(ids_path, 'w') as file:
             json.dump(known_mat_ids, file, indent=4)
 
         if not found:
-            error = f"Object with '{{}}' in name not found".format(context.scene.obj_name_filter)
+            error = "Object with '{}' in name not found".format(context.scene.obj_name_filter)
 
         if error:
             self.report({'ERROR'}, error)
@@ -53,12 +55,14 @@ class MaterialIDCollector(bpy.types.Operator):
             self.report({'INFO'}, f"Material IDs saved to {ids_path}")
         return {'FINISHED'}
 
-    def collect_mat_ids(self, obj, known_mat_ids, ids_path):
+    def collect_mat_ids(self, obj, known_mat_ids, ids_path, suffix=None):
         if obj.mode != 'OBJECT':
             bpy.ops.object.mode_set(mode='OBJECT')
 
         filename = bpy.data.filepath if bpy.data.filepath else ids_path
         cache_key = splitext(split(filename)[1])[0]
+        if suffix:
+            cache_key += suffix
         known_mat_ids.setdefault(cache_key, {})
 
         # Collect material indices
